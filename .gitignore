@@ -1,0 +1,22 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+
+# 虚拟环境
+.venv/
+
+# PyCharm 配置
+.idea/
+
+# 模型与训练输出
+outputs/
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# SwanLab 本地日志
+swanlog/
+
+# 本地下载的 BERT 模型
+bert-base-chinese/
