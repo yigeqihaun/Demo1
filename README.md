@@ -92,6 +92,7 @@ python main.py
 |---|-------:|
 | 最佳验证集 Accuracy |  82.7% |
 | 测试集 Accuracy | 83.18% |
+
 测试集 Accuracy 与参考指标 83%接近，但训练集准确率明显高于验证集准确率，说明数据集上存在一定过拟合现象。
 ## SwanLab可视化
 使用 SwanLab 记录训练过程。 [查看SwanLab曲线](https://swanlab.cn/@yigeqihuan/bert-news-classification/v1/47b5gz/runs/jadtbgdm/chart)
@@ -146,6 +147,7 @@ Weighted F1-score 为 0.8317。整体结果达到了约 83% 的参考指标。
 | Batch-16   | 2e-5 | 16 | 0.2 |          82.5% |       83.46% |
 | Dropout-01 | 2e-5 | 8 | 0.1 |            83% |        84.3% |
 | Dropout-03 | 2e-5 | 8 | 0.3 |          83.1% |       83.65% |
+
 1e-5：更新更慢，训练更稳定，但 6 个 Epoch 内可能没充分收敛。
 
 3e-5：收敛可能更快，但验证集 Loss 也可能波动更大。
