@@ -9,7 +9,7 @@ __pycache__/
 .idea/
 
 # 模型与训练输出
-outputs/
+output/outputs/
 *.pt
 *.pth
 *.bin

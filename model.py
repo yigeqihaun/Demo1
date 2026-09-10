@@ -11,7 +11,7 @@ class BertClassifier(nn.Module):
         dropout_rate：Dropout比例，用于减轻过拟合。
         """
         super().__init__()
-        self.bert = BertModel.from_pretrained(model_name)       #加载预训练BERT模型
+        self.bert = BertModel.from_pretrained(model_name,local_files_only=True)       #加载预训练BERT模型
         self.dropout = nn.Dropout(dropout_rate)     #定义Dropout层
         self.classifier = nn.Linear(self.bert.config.hidden_size,num_labels)        #分类层
 

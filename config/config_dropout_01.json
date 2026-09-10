@@ -1,18 +1,18 @@
 {
-  "model_name": "google-bert/bert-base-chinese",
+  "model_name": "pretrained_model/bert-base-chinese",
   "train_path": "./data/train_3k.txt",
   "dev_path": "./data/dev_1k.txt",
   "test_path": "./data/test_1k.txt",
   "max_len": 128,
-  "batch_size": 16,
+  "batch_size": 8,
   "lr": 2e-5,
   "epochs": 6,
-  "dropout_rate": 0.2,
-  "warmup_steps": 75,
+  "dropout_rate": 0.1,
+  "warmup_steps": 150,
   "weight_decay": 0.01,
   "grad_clip": 1.0,
   "seed": 101,
   "num_workers": 0,
-  "output_dir": "outputs_batch_16",
+  "output_dir": "output/outputs_dropout_01",
   "use_swanlab": true
 }

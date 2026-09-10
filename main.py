@@ -4,11 +4,15 @@ import random
 from pathlib import Path
 import numpy as np
 import torch
+from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
-from dataset import NewsDataset,build_label_mapping
+from transformers import get_linear_schedule_with_warmup
+from dataset import NewsDataset
+from dataset import build_label_mapping
 from model import BertClassifier
-from train import train_model,evaluate_model
+from train import Trainer
+from train import evaluate_model
 
 def set_seed(seed):
     """
@@ -25,7 +29,7 @@ def set_seed(seed):
 
 def main():
     parser = argparse.ArgumentParser()      #创建命令行参数解析器
-    parser.add_argument("--config",default="config.json")       #设置配置文件参数，默认读取config.json
+    parser.add_argument("--config",default="config/config_base.json")       #设置配置文件参数，默认读取config_base.json
     args = parser.parse_args()      #读取命令行参数
     config = json.loads(Path(args.config).read_text(encoding="utf-8"))      #读取JSON配置文件
     set_seed(config["seed"])        #设置随机种子
@@ -40,7 +44,7 @@ def main():
     print("类别数量：", len(label_names))
     print("类别名称：", label_names)
 
-    tokenizer = AutoTokenizer.from_pretrained(config["model_name"])     #加载BERT分词器
+    tokenizer = AutoTokenizer.from_pretrained(config["model_name"],local_files_only=True)     #加载BERT分词器
     train_dataset = NewsDataset(config["train_path"],tokenizer,config["max_len"],label2id)      #创建训练集
     dev_dataset = NewsDataset(config["dev_path"],tokenizer,config["max_len"],label2id)      #创建验证集
     test_dataset = NewsDataset(config["test_path"],tokenizer,config["max_len"],label2id)        #创建测试集
@@ -58,25 +62,75 @@ def main():
         dropout_rate=config["dropout_rate"]
     )
 
-    model.to(device)
-    swanlab_run = None
+    model.to(device)        #将模型移动到CPU或GPU
 
-    if config["use_swanlab"]:       #根据配置决定是否启用SwanLab
+    optimizer = AdamW(          #在main.py中创建AdamW优化器
+        model.parameters(),
+        lr=config["lr"],
+        weight_decay=config["weight_decay"]
+    )
+
+    total_steps = (len(train_loader) * config["epochs"])        #计算总训练步数
+
+    #在main.py中创建学习率调度器
+    scheduler = get_linear_schedule_with_warmup(optimizer,num_warmup_steps=config["warmup_steps"],num_training_steps=total_steps)
+
+    #创建模型输出目录
+    output_dir = Path(config["output_dir"])
+    output_dir.mkdir(parents=True,exist_ok=True)
+
+    best_accuracy = 0.0     #初始化训练过程中的状态变量
+    history = []
+
+    swanlab_run = None      #初始化SwanLab
+
+    if config["use_swanlab"]:
         try:
             import swanlab
-            swanlab_run = swanlab.init(project="bert-news-classification",config=config)        #创建一次实验记录
-        except Exception as error:          #SwanLab失败不影响本地训练
-            print("SwanLab 初始化失败，继续训练")
+
+            swanlab_run = swanlab.init(project="bert-news-classification",config=config)
+
+        except Exception as error:
+            print("SwanLab 初始化失败，继续本地训练。")
             print(error)
 
-    train_model(model,train_loader,dev_loader,config,device,swanlab_run)
-    best_model_path = Path(config["output_dir"]) / "best_model.pt"          #最佳模型保存路径
-    model.load_state_dict(torch.load(best_model_path,map_location=device))          #加载验证集上表现最好的模型参数
-    test_accuracy,test_report = evaluate_model(model,test_loader,device,label_names)        #在测试集上进行最终评估
+    # 创建训练器
+    trainer = Trainer(
+        model=model,
+        train_loader=train_loader,
+        dev_loader=dev_loader,
+        optimizer=optimizer,
+        scheduler=scheduler,
+        config=config,
+        device=device,
+        output_dir=output_dir,
+        best_accuracy=best_accuracy,
+        history=history,
+        label2id=label2id,
+        label_names=label_names,
+        swanlab_run=swanlab_run
+    )
+
+    # 开始训练
+    trainer.train()
+
+    # 最佳模型路径
+    best_model_path = ( output_dir/ "best_model.pt")
+
+    # 加载完整 checkpoint
+    checkpoint = torch.load(best_model_path,map_location=device)
+
+    # 从 checkpoint 中读取模型权重
+    model.load_state_dict(checkpoint["model_state_dict"])
+    print("最佳验证集准确率：",checkpoint["best_dev_accuracy"])
+    print("标签映射：",checkpoint["label2id"])
+
+    # 使用最佳模型在测试集上评估
+    test_accuracy, test_report = evaluate_model(model,test_loader,device,checkpoint["label_names"])
+
+    # 将测试集准确率上传到 SwanLab
     if swanlab_run is not None:
-        swanlab_run.log({
-            "test_accuracy": test_accuracy
-        })
+        swanlab_run.log({"test_accuracy": test_accuracy})
 
 
 if __name__ == "__main__":

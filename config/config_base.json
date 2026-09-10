@@ -1,5 +1,5 @@
 {
-  "model_name": "google-bert/bert-base-chinese",
+  "model_name": "pretrained_model/bert-base-chinese",
   "train_path": "./data/train_3k.txt",
   "dev_path": "./data/dev_1k.txt",
   "test_path": "./data/test_1k.txt",
@@ -13,6 +13,6 @@
   "grad_clip": 1.0,
   "seed": 101,
   "num_workers": 0,
-  "output_dir": "outputs",
+  "output_dir": "output/outputs",
   "use_swanlab": true
 }
